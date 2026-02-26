@@ -1,0 +1,197 @@
+[
+    {
+        "title": "Two Sum — Find Pair with Target",
+        "description": "Given an array of N integers and a target sum T, find and print the indices (0-based) of two numbers that add up to T. Print them in ascending order separated by a space. It is guaranteed that exactly one valid pair exists.\n\nInput Format:\n- Line 1: Two integers N and T\n- Line 2: N space-separated integers\n\nConstraints:\n- 2 <= N <= 10^5\n- -10^9 <= arr[i] <= 10^9\n\nOutput Format:\n- Two space-separated indices in ascending order",
+        "starting_code": "#include <iostream>\n#include <unordered_map>\nusing namespace std;\n\nint main() {\n    int n, target;\n    cin >> n >> target;\n    int arr[n];\n    for (int i = 0; i <= n; i++) {  // BUG 1: off-by-one, should be i < n\n        cin >> arr[i];\n    }\n\n    unordered_map<int, int> seen;\n    for (int i = 0; i < n; i++) {\n        int complement = target - arr[i];\n        if (seen.find(complement) != seen.end()) {\n            cout << seen[complement] << \" \" << i << endl;\n            return 0;\n        }\n        seen[arr[i]] = i;\n    }\n    cout << \"-1 -1\" << endl  // BUG 2: missing semicolon\n    return 0;\n}\n",
+        "language": "cpp",
+        "time_limit": 300,
+        "test_cases": [
+            {
+                "input_data": "4 9\n2 7 11 15",
+                "expected_output": "0 1",
+                "is_hidden": false
+            },
+            {
+                "input_data": "3 6\n3 2 4",
+                "expected_output": "1 2",
+                "is_hidden": false
+            },
+            {
+                "input_data": "2 3\n1 2",
+                "expected_output": "0 1",
+                "is_hidden": false
+            },
+            {
+                "input_data": "5 10\n1 3 5 7 3",
+                "expected_output": "2 3",
+                "is_hidden": true
+            },
+            {
+                "input_data": "6 0\n-3 4 3 90 -4 1",
+                "expected_output": "0 2",
+                "is_hidden": true
+            },
+            {
+                "input_data": "4 -1\n-5 2 4 -6",
+                "expected_output": "1 3",
+                "is_hidden": true
+            }
+        ]
+    },
+    {
+        "title": "Longest Palindromic Substring",
+        "description": "Given a string S, find and print the longest substring of S that is a palindrome. If there are multiple palindromic substrings of the same maximum length, print the one that appears first.\n\nInput Format:\n- Line 1: A single string S (lowercase English letters only)\n\nConstraints:\n- 1 <= |S| <= 1000\n\nOutput Format:\n- The longest palindromic substring",
+        "starting_code": "#include <iostream>\n#include <string>\nusing namespace std;\n\nstring expandAroundCenter(const string& s, int left, int right) {\n    while (left >= 0 && right < s.length() && s[left] == s[right]) {\n        left--;\n        right++;\n    }\n    return s.substr(left, right - left);  // BUG 1: should be s.substr(left + 1, right - left - 1)\n}\n\nint main() {\n    string s;\n    cin >> s;\n\n    if (s.length() < 1) {\n        cout << \"\" << endl;\n        return 0;\n    }\n\n    string longest = s.substr(0, 1);\n    for (int i = 0; i < s.length(); i++) {\n        string odd = expandAroundCenter(s, i, i);\n        string even = expandAroundCenter(s, i, i + 1);\n\n        if (odd.length() > longest.length()) {\n            longest = odd;\n        }\n        if (even.length() > longest.length()) {\n            longest = even;\n        }\n    }\n    cout << longest << endl;\n    return 0\n}\n",
+        "language": "cpp",
+        "time_limit": 300,
+        "test_cases": [
+            {
+                "input_data": "babad",
+                "expected_output": "bab",
+                "is_hidden": false
+            },
+            {
+                "input_data": "cbbd",
+                "expected_output": "bb",
+                "is_hidden": false
+            },
+            {
+                "input_data": "a",
+                "expected_output": "a",
+                "is_hidden": false
+            },
+            {
+                "input_data": "racecar",
+                "expected_output": "racecar",
+                "is_hidden": true
+            },
+            {
+                "input_data": "aacabdkacaa",
+                "expected_output": "aca",
+                "is_hidden": true
+            },
+            {
+                "input_data": "abcba",
+                "expected_output": "abcba",
+                "is_hidden": true
+            }
+        ]
+    },
+    {
+        "title": "Reverse a Singly Linked List",
+        "description": "Given a singly linked list of N integers, reverse it and print the reversed list.\n\nInput Format:\n- Line 1: An integer N (number of nodes)\n- Line 2: N space-separated integers representing node values\n\nConstraints:\n- 0 <= N <= 10^5\n- -10^4 <= node value <= 10^4\n\nOutput Format:\n- The reversed linked list values separated by spaces. Print \"empty\" if the list is empty.",
+        "starting_code": "#include <iostream>\nusing namespace std;\n\nstruct Node {\n    int data;\n    Node* next;\n    Node(int val) : data(val), next(nullptr) {}\n};\n\nNode* reverseList(Node* head) {\n    Node* prev = nullptr;\n    Node* curr = head;\n    while (curr != nullptr) {\n        Node* next = curr->next;\n        curr->next = prev;\n        prev = curr;\n        curr = next;\n    }\n    return curr;  // BUG 1: should return prev, not curr (curr is nullptr here)\n}\n\nint main() {\n    int n;\n    cin >> n;\n\n    if (n == 0) {\n        cout << \"empty\" << endl;\n        return 0;\n    }\n\n    Node* head = nullptr;\n    Node* tail = nullptr;\n    for (int i = 0; i < n; i++) {\n        int val;\n        cin >> val;\n        Node* node = new Node(val);\n        if (!head) {\n            head = node;\n            tail = node;\n        } else {\n            tail->next = node;\n            tail = node;\n        }\n    }\n\n    head = reverseList(head);\n    Node* temp = head;\n    while (temp != nullptr) {\n        cout << temp->data;\n        if (temp->next) cout << \" \";\n        temp = temp->next;\n    }\n    cout << endl;\n    return 0;\n}\n",
+        "language": "cpp",
+        "time_limit": 300,
+        "test_cases": [
+            {
+                "input_data": "5\n1 2 3 4 5",
+                "expected_output": "5 4 3 2 1",
+                "is_hidden": false
+            },
+            {
+                "input_data": "1\n42",
+                "expected_output": "42",
+                "is_hidden": false
+            },
+            {
+                "input_data": "0",
+                "expected_output": "empty",
+                "is_hidden": false
+            },
+            {
+                "input_data": "3\n10 20 30",
+                "expected_output": "30 20 10",
+                "is_hidden": true
+            },
+            {
+                "input_data": "6\n-1 0 5 -3 8 2",
+                "expected_output": "2 8 -3 5 0 -1",
+                "is_hidden": true
+            },
+            {
+                "input_data": "2\n100 200",
+                "expected_output": "200 100",
+                "is_hidden": true
+            }
+        ]
+    },
+    {
+        "title": "Binary Tree Inorder Traversal",
+        "description": "Given a binary tree represented as a level-order array (using -1 for null nodes), print its inorder traversal (Left, Root, Right).\n\nInput Format:\n- Line 1: An integer N (number of elements in level-order, including -1 for nulls)\n- Line 2: N space-separated integers (-1 represents a null node)\n\nConstraints:\n- 1 <= N <= 1000\n- Node values are between -100 and 100 (excluding -1 which means null)\n\nOutput Format:\n- Space-separated values of the inorder traversal",
+        "starting_code": "#include <iostream>\n#include <queue>\n#include <vector>\nusing namespace std;\n\nstruct TreeNode {\n    int val;\n    TreeNode* left;\n    TreeNode* right;\n    TreeNode(int x) : val(x), left(nullptr), right(nullptr) {}\n};\n\nTreeNode* buildTree(vector<int>& nodes) {\n    if (nodes.empty() || nodes[0] == -1) return nullptr;\n    TreeNode* root = new TreeNode(nodes[0]);\n    queue<TreeNode*> q;\n    q.push(root);\n    int i = 1;\n    while (!q.empty() && i < nodes.size()) {\n        TreeNode* curr = q.front();\n        q.pop();\n        if (i < nodes.size() && nodes[i] != -1) {\n            curr->left = new TreeNode(nodes[i]);\n            q.push(curr->left);\n        }\n        i++;\n        if (i < nodes.size() && nodes[i] != -1) {\n            curr->right = new TreeNode(nodes[i]);\n            q.push(curr->right);\n        }\n        i++;\n    }\n    return root;\n}\n\nvoid inorder(TreeNode* root, vector<int>& result) {\n    if (root == nullptr) return;\n    inorder(root->left, result);\n    result.push_back(root->val);\n    inorder(root->left, result);  // BUG 1: should be root->right, not root->left\n}\n\nint main() {\n    int n;\n    cin >> n;\n    vector<int> nodes(n);\n    for (int i = 0; i < n; i++) {\n        cin >> nodes[i];\n    }\n\n    TreeNode* root = buildTree(nodes);\n    vector<int> result;\n    inorder(root, result);\n\n    for (int i = 0; i < result.size(); i++) {\n        cout << result[i];\n        if (i < result.size()) cout << \" \";  // BUG 2: should be i < result.size() - 1\n    }\n    cout << endl;\n    return 0;\n}\n",
+        "language": "cpp",
+        "time_limit": 300,
+        "test_cases": [
+            {
+                "input_data": "7\n1 2 3 4 5 -1 6",
+                "expected_output": "4 2 5 1 3 6",
+                "is_hidden": false
+            },
+            {
+                "input_data": "1\n10",
+                "expected_output": "10",
+                "is_hidden": false
+            },
+            {
+                "input_data": "3\n1 -1 2",
+                "expected_output": "1 2",
+                "is_hidden": false
+            },
+            {
+                "input_data": "5\n5 3 7 1 4",
+                "expected_output": "1 3 4 5 7",
+                "is_hidden": true
+            },
+            {
+                "input_data": "7\n10 5 15 3 7 12 20",
+                "expected_output": "3 5 7 10 12 15 20",
+                "is_hidden": true
+            },
+            {
+                "input_data": "3\n1 2 -1",
+                "expected_output": "2 1",
+                "is_hidden": true
+            }
+        ]
+    },
+    {
+        "title": "Climbing Stairs — Dynamic Programming",
+        "description": "You are climbing a staircase. It takes N steps to reach the top. Each time you can either climb 1 or 2 steps. Print the number of distinct ways you can climb to the top.\n\nInput Format:\n- Line 1: A single integer N\n\nConstraints:\n- 1 <= N <= 45\n\nOutput Format:\n- A single integer representing the number of distinct ways",
+        "starting_code": "#include <iostream>\nusing namespace std;\n\nint climbStairs(int n) {\n    if (n <= 1) return 1;\n\n    int dp[n + 1];\n    dp[0] = 1;\n    dp[1] = 1;\n\n    for (int i = 2; i < n; i++) {  // BUG 1: should be i <= n, not i < n\n        dp[i] = dp[i - 1] + dp[i - 2];\n    }\n    return dp[n];\n}\n\nint main() {\n    int n;\n    cin >> n;\n    cout << climbStairs(n) << endl;\n    return 0;\n}\n",
+        "language": "cpp",
+        "time_limit": 300,
+        "test_cases": [
+            {
+                "input_data": "2",
+                "expected_output": "2",
+                "is_hidden": false
+            },
+            {
+                "input_data": "3",
+                "expected_output": "3",
+                "is_hidden": false
+            },
+            {
+                "input_data": "1",
+                "expected_output": "1",
+                "is_hidden": false
+            },
+            {
+                "input_data": "5",
+                "expected_output": "8",
+                "is_hidden": true
+            },
+            {
+                "input_data": "10",
+                "expected_output": "89",
+                "is_hidden": true
+            },
+            {
+                "input_data": "45",
+                "expected_output": "1836311903",
+                "is_hidden": true
+            }
+        ]
+    }
+]
