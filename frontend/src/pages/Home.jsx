@@ -176,33 +176,54 @@ const Home = () => {
   const { setPlayerInfo } = useUser();
   const { user, logout } = useAuth();
   const [roomCode, setRoomCode] = useState('');
-  const [showJoin, setShowJoin] = useState(false);
-  const [joinMode, setJoinMode] = useState(null);
+  const [showPlayMenu, setShowPlayMenu] = useState(false);
+  const [showJoinInput, setShowJoinInput] = useState(false);
+  const [joinError, setJoinError] = useState('');
+  const [validating, setValidating] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
 
-  const handleLocal = () => {
+  const handleCreateRoom = () => {
     if (user) setPlayerInfo(user.username);
     const newRoom = Math.random().toString(36).substring(2, 8).toUpperCase();
     navigate(`/lobby/${newRoom}`);
   };
 
-  const handleOnline = () => {
-    setJoinMode('ONLINE');
-    setShowJoin(true);
-    setRoomCode('');
-  };
-
-  const handleJoinRoom = (e) => {
+  const handleJoinRoom = async (e) => {
     e.preventDefault();
-    if (!roomCode.trim()) return;
-    if (user) setPlayerInfo(user.username);
-    navigate(`/room/${roomCode.toUpperCase()}`);
+    const code = roomCode.trim().toUpperCase();
+    if (!code) return;
+
+    setJoinError('');
+    setValidating(true);
+
+    try {
+      const res = await fetch(`http://localhost:3000/api/rooms/${code}/validate`);
+      const data = await res.json();
+
+      if (data.valid) {
+        if (user) setPlayerInfo(user.username);
+        navigate(`/lobby/${code}`);
+      } else {
+        setJoinError(data.error || 'Could not join room');
+      }
+    } catch (err) {
+      setJoinError('Could not connect to server');
+    } finally {
+      setValidating(false);
+    }
   };
 
   const handleSignOut = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleBackFromPlay = () => {
+    setShowPlayMenu(false);
+    setShowJoinInput(false);
+    setJoinError('');
+    setRoomCode('');
   };
 
   return (/*#__PURE__*/
@@ -277,26 +298,24 @@ const Home = () => {
 
         _jsx("h1", { className: "title-among-us", children: "AMONG BUGS" }),
 
-        !showJoin ? /*#__PURE__*/
+        !showPlayMenu ? /*#__PURE__*/
         _jsxs(_Fragment, { children: [/*#__PURE__*/
-          _jsxs("div", { className: "main-menu-grid", children: [/*#__PURE__*/
-            _jsx("button", { className: "btn-among-us", onClick: handleLocal, children: "LOCAL" }
-
+          _jsxs("div", { className: "main-menu-grid", style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px' }, children: [/*#__PURE__*/
+            _jsx("button", { className: "btn-among-us", onClick: () => setShowPlayMenu(true), style: { width: '100%', maxWidth: '500px', padding: '18px 32px', fontSize: '1.5rem' }, children: "PLAY" }
             ), /*#__PURE__*/
-            _jsx("button", { className: "btn-among-us", onClick: handleOnline, children: "ONLINE" }
-
-            ), /*#__PURE__*/
-            _jsx("button", {
-              className: "btn-among-us btn-among-us-sm",
-              onClick: () => navigate('/how-to-play'), children:
-              "HOW TO PLAY" }
-
-            ), /*#__PURE__*/
-            _jsx("button", {
-              className: "btn-among-us btn-among-us-sm",
-              onClick: () => navigate('/mock-play'), children:
-              "MOCK PLAY" }
-
+            _jsxs("div", { style: { display: 'flex', gap: '14px', width: '100%', maxWidth: '500px' }, children: [/*#__PURE__*/
+              _jsx("button", {
+                className: "btn-among-us btn-among-us-sm",
+                style: { flex: 1 },
+                onClick: () => navigate('/how-to-play'), children:
+                "HOW TO PLAY" }
+              ), /*#__PURE__*/
+              _jsx("button", {
+                className: "btn-among-us btn-among-us-sm",
+                style: { flex: 1 },
+                onClick: () => navigate('/mock-play'), children:
+                "MOCK PLAY" }
+              )] }
             )] }
           ), /*#__PURE__*/
 
@@ -304,14 +323,38 @@ const Home = () => {
             _jsx("button", {
               className: "btn-icon-among-us",
               onClick: () => setShowStats(true), children: /*#__PURE__*/
-
               _jsx(BarChart2, { size: 28 }) }
             ) }
+          )] }
+
+        ) : !showJoinInput ? /*#__PURE__*/
+
+        _jsxs("div", { className: "lobby-card animate-slide-in", style: { textAlign: 'center' }, children: [/*#__PURE__*/
+          _jsx("h2", { className: "lobby-title", children: "MULTIPLAYER" }), /*#__PURE__*/
+          _jsxs("div", { style: { display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '20px' }, children: [/*#__PURE__*/
+            _jsx("button", {
+              className: "btn-among-us",
+              onClick: handleCreateRoom,
+              style: { width: '100%', padding: '16px', fontSize: '1.1rem' }, children:
+              "CREATE ROOM" }
+            ), /*#__PURE__*/
+            _jsx("button", {
+              className: "btn-among-us",
+              onClick: () => { setShowJoinInput(true); setJoinError(''); setRoomCode(''); },
+              style: { width: '100%', padding: '16px', fontSize: '1.1rem' }, children:
+              "JOIN ROOM" }
+            ), /*#__PURE__*/
+            _jsx("button", {
+              className: "btn-among-us btn-among-us-sm",
+              onClick: handleBackFromPlay,
+              style: { width: '100%', marginTop: '4px' }, children:
+              "BACK" }
+            )] }
           )] }
         ) : /*#__PURE__*/
 
         _jsxs("div", { className: "lobby-card animate-slide-in", children: [/*#__PURE__*/
-          _jsxs("h2", { className: "lobby-title", children: [joinMode, " \u2014 JOIN ROOM"] }), /*#__PURE__*/
+          _jsx("h2", { className: "lobby-title", children: "JOIN ROOM" }), /*#__PURE__*/
           _jsxs("form", { onSubmit: handleJoinRoom, className: "lobby-form", children: [/*#__PURE__*/
             _jsx("input", {
               type: "text",
@@ -322,21 +365,28 @@ const Home = () => {
               maxLength: 6,
               autoFocus: true,
               style: { letterSpacing: '0.3em', fontSize: '1.8rem' } }
+            ),
+
+            joinError && /*#__PURE__*/
+            _jsx("div", { style: {
+                padding: '10px 14px', borderRadius: '8px', marginTop: '8px',
+                background: 'rgba(255,49,49,0.1)', border: '1px solid rgba(255,49,49,0.3)',
+                color: '#ff3131', fontSize: '0.85rem', fontWeight: 700, textAlign: 'center'
+              }, children: joinError }
             ), /*#__PURE__*/
+
             _jsxs("div", { className: "lobby-buttons", children: [/*#__PURE__*/
               _jsx("button", {
                 type: "button",
                 className: "btn-among-us btn-among-us-sm lobby-back-btn",
-                onClick: () => setShowJoin(false), children:
+                onClick: () => { setShowJoinInput(false); setJoinError(''); }, children:
                 "BACK" }
-
               ), /*#__PURE__*/
               _jsx("button", {
                 type: "submit",
                 className: "btn-among-us btn-among-us-sm lobby-enter-btn",
-                disabled: !roomCode.trim(), children:
-                "JOIN" }
-
+                disabled: !roomCode.trim() || validating, children:
+                validating ? 'CHECKING...' : 'JOIN' }
               )] }
             )] }
           )] }
@@ -345,7 +395,6 @@ const Home = () => {
       ), /*#__PURE__*/
 
       _jsx(StatsModal, { isOpen: showStats, onClose: () => setShowStats(false) }), /*#__PURE__*/
-
 
       _jsx("style", { children: `
                 @keyframes fadeIn {

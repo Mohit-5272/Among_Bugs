@@ -47,11 +47,30 @@ registerSocketHandlers(io);
 const Challenge = require('./models/Challenge');
 const TestCase = require('./models/TestCase');
 const authRoutes = require('./routes/auth');
+const gameState = require('./game/GameState');
 
 // Apply rate limiters to auth routes
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/signup', signupLimiter);
 app.use('/api/auth', authRoutes);
+
+// ─── ROOM VALIDATION (for Join Room flow) ───────────
+app.get('/api/rooms/:roomId/validate', (req, res) => {
+    const roomId = req.params.roomId.toUpperCase();
+    const room = gameState.rooms.get(roomId);
+
+    if (!room) {
+        return res.json({ valid: false, error: 'Invalid room code' });
+    }
+    if (room.status !== 'LOBBY') {
+        return res.json({ valid: false, error: 'Game already in progress' });
+    }
+    if (room.players.size >= gameState.MAX_PLAYERS) {
+        return res.json({ valid: false, error: 'Room is full' });
+    }
+
+    return res.json({ valid: true, playerCount: room.players.size, maxPlayers: gameState.MAX_PLAYERS });
+});
 
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', uptime: process.uptime() });
@@ -93,8 +112,8 @@ app.get('/api/challenges', async (req, res) => {
     }
 });
 
-// ─── GEMINI AI (Dynamic DSA Question Generation) ────
-const { generateDynamicChallenge, FALLBACK_CHALLENGE } = require('./services/geminiService');
+// ─── GROQ + GEMINI AI (Dynamic DSA Question Generation) ──
+const { generateDynamicChallenge, FALLBACK_CHALLENGE } = require('./services/llmService');
 
 app.get('/api/challenges/generate', async (req, res) => {
     try {
@@ -183,6 +202,11 @@ async function executeCode(sourceCode, stdin, expectedOutput) {
                 const stderr = data.program_error || '';
                 const exitStatus = data.status;
 
+                // Normalize for comparison: trim, collapse whitespace, remove trailing newlines
+                const normalize = (s) => s.trim().replace(/\r\n/g, '\n').replace(/\s+$/gm, '').replace(/\n+$/g, '');
+                const normalizedStdout = normalize(stdout);
+                const normalizedExpected = normalize(expectedOutput);
+
                 let status;
                 let passed = false;
 
@@ -190,11 +214,12 @@ async function executeCode(sourceCode, stdin, expectedOutput) {
                     status = 'Compile Error';
                 } else if (exitStatus !== '0' && exitStatus !== 0) {
                     status = 'Runtime Error';
-                } else if (stdout === expectedOutput.trim()) {
+                } else if (normalizedStdout === normalizedExpected) {
                     status = 'Accepted';
                     passed = true;
                 } else {
                     status = 'Wrong Answer';
+                    console.log(`[Wandbox] Wrong Answer debug: got="${normalizedStdout}" expected="${normalizedExpected}")`);
                 }
 
                 return {

@@ -170,8 +170,10 @@ const MockPlay = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // AI Impostor — runs every 15-25 seconds
+  // AI Impostor — first sabotage 15s after challenge loads, then every 15s
   useEffect(() => {
+    if (!challenge) return; // Don't start until challenge is loaded
+
     const runAI = () => {
       if (!editorInstance.current) return;
       const model = editorInstance.current.getModel();
@@ -191,17 +193,17 @@ const MockPlay = () => {
       }
     };
 
-    const firstDelay = 10000 + Math.random() * 5000;
+    const firstDelay = 15000;
     const firstTimeout = setTimeout(() => {
       runAI();
-      aiIntervalRef.current = setInterval(runAI, 15000 + Math.random() * 10000);
+      aiIntervalRef.current = setInterval(runAI, 15000);
     }, firstDelay);
 
     return () => {
       clearTimeout(firstTimeout);
       if (aiIntervalRef.current) clearInterval(aiIntervalRef.current);
     };
-  }, []);
+  }, [challenge]);
 
   // Core execution function — runs a frozen code snapshot against all test cases
   const runTestsWithCode = useCallback(async (codeSnapshot) => {
@@ -241,6 +243,11 @@ const MockPlay = () => {
         const stdout = (data.program_output || '').trim();
         const exitStatus = data.status;
 
+        // Normalize for comparison
+        const normalize = (s) => s.trim().replace(/\r\n/g, '\n').replace(/\s+$/gm, '').replace(/\n+$/g, '');
+        const normalizedStdout = normalize(stdout);
+        const normalizedExpected = normalize(tc.expected || '');
+
         let status;
         let passed = false;
 
@@ -248,11 +255,12 @@ const MockPlay = () => {
           status = 'Compile Error';
         } else if (exitStatus !== '0' && exitStatus !== 0) {
           status = 'Runtime Error';
-        } else if (stdout === tc.expected.trim()) {
+        } else if (normalizedStdout === normalizedExpected) {
           status = 'Accepted';
           passed = true;
         } else {
           status = 'Wrong Answer';
+          console.log(`[MockPlay] TC${i+1} Wrong Answer: got="${normalizedStdout}" expected="${normalizedExpected}"`);
         }
 
         if (!passed) allPassed = false;
@@ -307,7 +315,7 @@ const MockPlay = () => {
         _jsx("h2", { style: { color: '#00f0ff', fontWeight: 800, fontSize: '1.3rem', fontFamily: "'Nunito', sans-serif" }, children: "GENERATING CHALLENGE..." }
 
         ), /*#__PURE__*/
-        _jsx("p", { style: { color: 'rgba(255,255,255,0.3)', fontSize: '0.8rem', animation: 'pulse 1.5s ease-in-out infinite' }, children: "Gemini AI is crafting a random DSA problem for you" }
+        _jsx("p", { style: { color: 'rgba(255,255,255,0.3)', fontSize: '0.8rem', animation: 'pulse 1.5s ease-in-out infinite' }, children: "Question is loading..." }
 
         ), /*#__PURE__*/
         _jsx("style", { children: `
