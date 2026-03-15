@@ -1,17 +1,11 @@
 import { useState } from 'react';
 import { Undo2, Snowflake, Zap } from 'lucide-react';
 
-interface PowerUpPanelProps {
-    onUndoSabotage: () => void;
-    onFreezeImpostor: () => void;
-    lastSabotageCode: string | null;
-}
-
 const PowerUpPanel = ({
     onUndoSabotage,
     onFreezeImpostor,
     lastSabotageCode,
-}: PowerUpPanelProps) => {
+}) => {
     const [undoUsed, setUndoUsed] = useState(false);
     const [freezeUsed, setFreezeUsed] = useState(false);
     const [freezeActive, setFreezeActive] = useState(false);

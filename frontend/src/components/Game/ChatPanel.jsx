@@ -2,16 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { useUser } from '../../context/UserContext';
 import { Send, MessageCircle } from 'lucide-react';
 
-interface ChatMessage {
-    id: number;
-    sender: string;
-    text: string;
-    timestamp: number;
-    color: string;
-}
-
 // Mock messages to seed the chat
-const MOCK_MESSAGES: ChatMessage[] = [
+const MOCK_MESSAGES = [
     { id: 1, sender: 'Player_2', text: 'I think line 5 has a bug', timestamp: Date.now() - 60000, color: '#00f0ff' },
     { id: 2, sender: 'Player_3', text: 'Yeah the operator looks wrong', timestamp: Date.now() - 45000, color: '#39ff14' },
     { id: 3, sender: 'Player_4', text: 'Also check the semicolons', timestamp: Date.now() - 30000, color: '#ff9800' },
@@ -19,9 +11,9 @@ const MOCK_MESSAGES: ChatMessage[] = [
 
 const ChatPanel = () => {
     const { player } = useUser();
-    const [messages, setMessages] = useState<ChatMessage[]>(MOCK_MESSAGES);
+    const [messages, setMessages] = useState(MOCK_MESSAGES);
     const [input, setInput] = useState('');
-    const scrollRef = useRef<HTMLDivElement>(null);
+    const scrollRef = useRef(null);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -29,11 +21,11 @@ const ChatPanel = () => {
         }
     }, [messages]);
 
-    const handleSend = (e: React.FormEvent) => {
+    const handleSend = (e) => {
         e.preventDefault();
         if (!input.trim()) return;
 
-        const newMsg: ChatMessage = {
+        const newMsg = {
             id: Date.now(),
             sender: player?.username || 'You',
             text: input.trim(),
@@ -45,7 +37,7 @@ const ChatPanel = () => {
         setInput('');
     };
 
-    const formatTime = (ts: number) => {
+    const formatTime = (ts) => {
         const d = new Date(ts);
         return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
     };

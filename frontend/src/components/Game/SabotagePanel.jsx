@@ -1,28 +1,15 @@
 import { useState, useMemo } from 'react';
 import { Skull, AlertCircle, Delete, Type, Bug, Hash, Code2, Braces } from 'lucide-react';
 
-interface SabotageDef {
-    id: string;
-    label: string;
-    icon: typeof AlertCircle;
-    color: string;
-    description: string;
-    /** Check if this sabotage is applicable to the given code */
-    isApplicable: (code: string) => boolean;
-    /** Apply the sabotage — returns modified code */
-    apply: (code: string) => string;
-}
-
-const ALL_SABOTAGES: SabotageDef[] = [
+const ALL_SABOTAGES = [
     {
         id: 'INVERT_COMPARISON',
         label: 'Invert Comparison',
         icon: AlertCircle,
         color: '#ff9800',
         description: 'Flips a > to < or < to >',
-        isApplicable: (code) => /[^<>!]=?\s*(>|<)\s*[^<>=]/.test(code) && (code.includes(' > ') || code.includes(' < ')),
+        isApplicable: (code) => /[<>!]=?\s*(>|<)\s*[^<>=]/.test(code) && (code.includes(' > ') || code.includes(' < ')),
         apply: (code) => {
-            // Find the first standalone > or < in a comparison (not << or >> or <=)
             const lines = code.split('\n');
             for (let i = 0; i < lines.length; i++) {
                 if (lines[i].includes('cout') || lines[i].includes('cin') || lines[i].includes('#include')) continue;
@@ -50,7 +37,6 @@ const ALL_SABOTAGES: SabotageDef[] = [
         },
         apply: (code) => {
             const lines = code.split('\n');
-            // Find a non-trivial line ending with ; (skip includes, empty)
             const candidates = lines
                 .map((l, i) => ({ line: l, idx: i }))
                 .filter(({ line }) => line.trim().endsWith(';') && !line.includes('#include') && !line.includes('using ') && line.trim().length > 5);
@@ -75,7 +61,6 @@ const ALL_SABOTAGES: SabotageDef[] = [
                     return lines.join('\n');
                 }
             }
-            // Try changing i = 0 to i = 1
             for (let i = 0; i < lines.length; i++) {
                 if (lines[i].includes('for') && lines[i].includes('= 0')) {
                     lines[i] = lines[i].replace('= 0', '= 1');
@@ -118,17 +103,14 @@ const ALL_SABOTAGES: SabotageDef[] = [
         color: '#39ff14',
         description: 'Renames a variable with a near-identical name',
         isApplicable: (code) => {
-            // Look for variable names with 'l' that can be swapped to '1', or 'o' to '0'
             const varPattern = /\b\w*[liLoO]\w*\b/;
             const lines = code.split('\n').filter(l => !l.includes('#include') && !l.includes('cout') && !l.includes('cin'));
             return lines.some(l => varPattern.test(l));
         },
         apply: (code) => {
-            // Find a variable name and swap l→1, or I→l
             const varMatches = code.match(/\b(\w{3,})\b/g);
             if (!varMatches) return code;
-            // Find variables used more than once (so change is subtle)
-            const counts: Record<string, number> = {};
+            const counts = {};
             for (const v of varMatches) {
                 if (['int', 'for', 'return', 'void', 'include', 'iostream', 'using', 'namespace', 'std', 'cout', 'cin', 'endl', 'main', 'string', 'nullptr', 'while', 'true', 'false', 'nullptr', 'char', 'bool', 'double', 'float', 'long', 'size', 'push_back', 'vector', 'queue', 'unordered_map'].includes(v)) continue;
                 counts[v] = (counts[v] || 0) + 1;
@@ -139,9 +121,8 @@ const ALL_SABOTAGES: SabotageDef[] = [
             let typo = target;
             if (target.includes('l')) typo = target.replace('l', '1');
             else if (target.includes('a')) typo = target.replace('a', 'o');
-            else typo = target.substring(0, target.length - 1); // drop last char
+            else typo = target.substring(0, target.length - 1);
             if (typo === target) return code;
-            // Only replace SOME occurrences (first half)
             let count = 0;
             const total = (code.match(new RegExp(`\\b${target}\\b`, 'g')) || []).length;
             const replaceCount = Math.max(1, Math.floor(total / 2));
@@ -159,19 +140,17 @@ const ALL_SABOTAGES: SabotageDef[] = [
         description: 'Removes a closing } from an if/for block',
         isApplicable: (code) => {
             const braceCount = (code.match(/}/g) || []).length;
-            return braceCount >= 3; // at least main + one block
+            return braceCount >= 3;
         },
         apply: (code) => {
             const lines = code.split('\n');
-            // Find closing braces that belong to if/for blocks (not main)
-            const candidates: number[] = [];
+            const candidates = [];
             for (let i = lines.length - 1; i >= 0; i--) {
                 if (lines[i].trim() === '}' && i > 2 && i < lines.length - 2) {
                     candidates.push(i);
                 }
             }
             if (candidates.length > 1) {
-                // Remove the first non-main closing brace
                 lines.splice(candidates[0], 1);
             }
             return lines.join('\n');
@@ -193,14 +172,9 @@ const ALL_SABOTAGES: SabotageDef[] = [
 
 const VISIBLE_COUNT = 3;
 
-interface SabotagePanelProps {
-    getCode: () => string;
-    setCode: (code: string) => void;
-}
-
-const SabotagePanel = ({ getCode, setCode }: SabotagePanelProps) => {
+const SabotagePanel = ({ getCode, setCode }) => {
     const [cooldown, setCooldown] = useState(0);
-    const [usedIds, setUsedIds] = useState<Set<string>>(new Set());
+    const [usedIds, setUsedIds] = useState(new Set());
     const [code, setLocalCode] = useState('');
 
     // Refresh code snapshot on each render when not on cooldown
@@ -214,7 +188,7 @@ const SabotagePanel = ({ getCode, setCode }: SabotagePanelProps) => {
 
     const visibleOptions = applicableOptions.slice(0, VISIBLE_COUNT);
 
-    const handleSabotage = (sab: SabotageDef) => {
+    const handleSabotage = (sab) => {
         if (cooldown > 0) return;
         const current = getCode();
         const modified = sab.apply(current);

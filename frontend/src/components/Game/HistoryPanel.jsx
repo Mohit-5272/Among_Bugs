@@ -11,7 +11,7 @@ const HistoryPanel = () => {
             padding: '16px',
             flex: 1,
             display: 'flex',
-            flexDirection: 'column' as const,
+            flexDirection: 'column',
         }}>
             <h3 style={{
                 fontSize: '0.8rem',
@@ -31,9 +31,9 @@ const HistoryPanel = () => {
             <div style={{
                 flex: 1,
                 display: 'flex',
-                flexDirection: 'column' as const,
+                flexDirection: 'column',
                 gap: '12px',
-                overflowY: 'auto' as const,
+                overflowY: 'auto',
             }}>
                 {mockHistory.length === 0 ? (
                     <p style={{
@@ -55,7 +55,7 @@ const HistoryPanel = () => {
                         >
                             <div style={{
                                 display: 'flex',
-                                flexDirection: 'column' as const,
+                                flexDirection: 'column',
                                 alignItems: 'center',
                                 marginTop: '4px',
                             }}>

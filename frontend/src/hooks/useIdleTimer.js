@@ -5,10 +5,10 @@ import { useEffect, useRef, useState, useCallback } from 'react';
  * Returns `isIdle: true` after `idleTimeoutMs` milliseconds of no activity.
  * Resets on any keydown, mousemove, or click inside the container.
  */
-export function useIdleTimer(idleTimeoutMs: number = 40000) {
+export function useIdleTimer(idleTimeoutMs = 40000) {
     const [isIdle, setIsIdle] = useState(false);
-    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const containerRef = useRef<HTMLDivElement>(null);
+    const timerRef = useRef(null);
+    const containerRef = useRef(null);
 
     const resetTimer = useCallback(() => {
         setIsIdle(false);
