@@ -1,23 +1,18 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { io, Socket } from 'socket.io-client';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { io } from 'socket.io-client';
 
 // We mock the backend URL for now until it's built
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
 
-interface SocketContextState {
-  socket: Socket | null;
-  isConnected: boolean;
-}
-
-const SocketContext = createContext<SocketContextState>({
+const SocketContext = createContext({
   socket: null,
   isConnected: false,
 });
 
 export const useSocket = () => useContext(SocketContext);
 
-export const SocketProvider = ({ children }: { children: ReactNode }) => {
-  const [socket, setSocket] = useState<Socket | null>(null);
+export const SocketProvider = ({ children }) => {
+  const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {

@@ -1,12 +1,5 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { useUser } from './UserContext';
-
-type ThemeMode = 'cyan' | 'red';
-
-interface ThemeContextState {
-    theme: ThemeMode;
-    colors: typeof THEMES['cyan'];
-}
 
 const THEMES = {
     cyan: {
@@ -31,16 +24,16 @@ const THEMES = {
     },
 };
 
-const ThemeContext = createContext<ThemeContextState>({
+const ThemeContext = createContext({
     theme: 'cyan',
     colors: THEMES.cyan,
 });
 
 export const useTheme = () => useContext(ThemeContext);
 
-export const ThemeProvider = ({ children }: { children: ReactNode }) => {
+export const ThemeProvider = ({ children }) => {
     const { player } = useUser();
-    const [theme, setTheme] = useState<ThemeMode>('cyan');
+    const [theme, setTheme] = useState('cyan');
 
     useEffect(() => {
         if (!player) { setTheme('cyan'); return; }

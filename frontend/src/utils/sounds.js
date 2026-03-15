@@ -3,9 +3,9 @@
  * No external audio files needed — all sounds are synthesized.
  */
 
-let audioCtx: AudioContext | null = null;
+let audioCtx = null;
 
-function getAudioCtx(): AudioContext {
+function getAudioCtx() {
     if (!audioCtx) audioCtx = new AudioContext();
     return audioCtx;
 }
@@ -31,7 +31,7 @@ export function playSabotageSound() {
 }
 
 /** Countdown beep — single tick for each second in the last 30s */
-export function playCountdownBeep(secondsLeft: number) {
+export function playCountdownBeep(secondsLeft) {
     try {
         const ctx = getAudioCtx();
         const osc = ctx.createOscillator();

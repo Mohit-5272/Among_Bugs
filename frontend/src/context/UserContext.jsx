@@ -1,23 +1,7 @@
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
-export type Role = 'CIVILIAN' | 'IMPOSTOR' | 'UNASSIGNED';
-
-export interface Player {
-    playerId: string;
-    username: string;
-    role: Role;
-    cursorColor: string;
-    isReady: boolean;
-}
-
-interface UserContextState {
-    player: Player | null;
-    setPlayerInfo: (username: string) => void;
-    mockAssignRole: (role: Role) => void; // For frontend testing
-}
-
-const UserContext = createContext<UserContextState>({
+const UserContext = createContext({
     player: null,
     setPlayerInfo: () => { },
     mockAssignRole: () => { },
@@ -27,8 +11,8 @@ export const useUser = () => useContext(UserContext);
 
 const CURSOR_COLORS = ['#39ff14', '#00f0ff', '#ff3131', '#ff9800', '#b051ff'];
 
-export const UserProvider = ({ children }: { children: ReactNode }) => {
-    const [player, setPlayer] = useState<Player | null>(null);
+export const UserProvider = ({ children }) => {
+    const [player, setPlayer] = useState(null);
 
     // Load from session storage if available to persist across reloads
     useEffect(() => {
@@ -38,8 +22,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         }
     }, []);
 
-    const setPlayerInfo = (username: string) => {
-        const newPlayer: Player = {
+    const setPlayerInfo = (username) => {
+        const newPlayer = {
             playerId: uuidv4(),
             username,
             role: 'UNASSIGNED',
@@ -50,7 +34,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         sessionStorage.setItem('among-bugs-player', JSON.stringify(newPlayer));
     };
 
-    const mockAssignRole = (role: Role) => {
+    const mockAssignRole = (role) => {
         if (!player) return;
         const updated = { ...player, role };
         setPlayer(updated);

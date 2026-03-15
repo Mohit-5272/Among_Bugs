@@ -10,28 +10,27 @@ import GameRoom from './pages/GameRoom';
 import HowToPlay from './pages/HowToPlay';
 import MockPlay from './pages/MockPlay';
 import Lobby from './pages/Lobby';
-import { ReactNode } from 'react';
 
 const pageVariants = {
   initial: { opacity: 0, y: 16 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.25, 0.1, 0.25, 1.0] as const } },
-  exit: { opacity: 0, y: -12, transition: { duration: 0.2, ease: [0.25, 0.1, 0.25, 1.0] as const } },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.25, 0.1, 0.25, 1.0] } },
+  exit: { opacity: 0, y: -12, transition: { duration: 0.2, ease: [0.25, 0.1, 0.25, 1.0] } },
 };
 
-const PageWrapper = ({ children }: { children: ReactNode }) => (
+const PageWrapper = ({ children }) => (
   <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit" style={{ height: '100%', width: '100%' }}>
     {children}
   </motion.div>
 );
 
-const ProtectedRoute = ({ children }: { children: ReactNode }) => {
+const ProtectedRoute = ({ children }) => {
   const { user, isLoading } = useAuth();
   if (isLoading) return null;
   if (!user) return <Navigate to="/login" replace />;
   return <>{children}</>;
 };
 
-const PublicRoute = ({ children }: { children: ReactNode }) => {
+const PublicRoute = ({ children }) => {
   const { user, isLoading } = useAuth();
   if (isLoading) return null;
   if (user) return <Navigate to="/" replace />;

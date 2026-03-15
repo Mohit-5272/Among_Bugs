@@ -1,39 +1,8 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 
 const API_URL = 'http://localhost:3000';
 
-interface AuthUser {
-    _id: string;
-    username: string;
-    dob?: string;
-    codeforcesId?: string;
-    leetcodeId?: string;
-    codechefId?: string;
-    gamesPlayed: number;
-    civilianWins: number;
-    impostorWins: number;
-    highestLevel: string;
-}
-
-interface AuthContextState {
-    user: AuthUser | null;
-    token: string | null;
-    isLoading: boolean;
-    signup: (data: SignupData) => Promise<{ error?: string }>;
-    login: (username: string, password: string) => Promise<{ error?: string }>;
-    logout: () => void;
-}
-
-interface SignupData {
-    username: string;
-    password: string;
-    dob: string;
-    codeforcesId?: string;
-    leetcodeId?: string;
-    codechefId?: string;
-}
-
-const AuthContext = createContext<AuthContextState>({
+const AuthContext = createContext({
     user: null,
     token: null,
     isLoading: true,
@@ -44,9 +13,9 @@ const AuthContext = createContext<AuthContextState>({
 
 export const useAuth = () => useContext(AuthContext);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-    const [user, setUser] = useState<AuthUser | null>(null);
-    const [token, setToken] = useState<string | null>(null);
+export const AuthProvider = ({ children }) => {
+    const [user, setUser] = useState(null);
+    const [token, setToken] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
 
     // Auto-login from localStorage on mount
@@ -60,14 +29,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsLoading(false);
     }, []);
 
-    const persist = (t: string, u: AuthUser) => {
+    const persist = (t, u) => {
         setToken(t);
         setUser(u);
         localStorage.setItem('among-bugs-token', t);
         localStorage.setItem('among-bugs-user', JSON.stringify(u));
     };
 
-    const signup = async (data: SignupData) => {
+    const signup = async (data) => {
         try {
             const res = await fetch(`${API_URL}/api/auth/signup`, {
                 method: 'POST',
@@ -83,7 +52,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-    const login = async (username: string, password: string) => {
+    const login = async (username, password) => {
         try {
             const res = await fetch(`${API_URL}/api/auth/login`, {
                 method: 'POST',

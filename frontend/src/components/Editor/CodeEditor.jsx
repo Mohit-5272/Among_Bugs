@@ -5,7 +5,7 @@ import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
 
 // Configure Monaco web workers for Vite
 self.MonacoEnvironment = {
-    getWorker(_: unknown, label: string) {
+    getWorker(_, label) {
         if (label === 'typescript' || label === 'javascript') {
             return new tsWorker();
         }
@@ -13,30 +13,10 @@ self.MonacoEnvironment = {
     },
 };
 
-interface EditorProps {
-    roomId: string;
-    initialChallenge: ChallengeData | null; // Receive challenge from parent (GameRoom)
-}
-
-export interface ChallengeData {
-    _id: string;
-    title: string;
-    description: string;
-    starterCode: string;
-    difficulty: string;
-    testCases: { input: string; expectedOutput: string; isHidden: boolean }[];
-}
-
-export interface CodeEditorHandle {
-    getCode: () => string;
-    setCode: (code: string) => void;
-    getChallenge: () => ChallengeData | null;
-}
-
-const CodeEditor = forwardRef<CodeEditorHandle, EditorProps>(({ roomId: _roomId, initialChallenge }, ref) => {
-    const editorRef = useRef<HTMLDivElement>(null);
-    const editorInstance = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
-    const [challenge, setChallenge] = useState<ChallengeData | null>(null);
+const CodeEditor = forwardRef(({ roomId: _roomId, initialChallenge }, ref) => {
+    const editorRef = useRef(null);
+    const editorInstance = useRef(null);
+    const [challenge, setChallenge] = useState(null);
 
     // Update internal challenge state whenever the parent provides a new one
     useEffect(() => {
@@ -48,7 +28,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, EditorProps>(({ roomId: _roomId,
     // Expose methods to parent
     useImperativeHandle(ref, () => ({
         getCode: () => editorInstance.current?.getModel()?.getValue() || '',
-        setCode: (code: string) => {
+        setCode: (code) => {
             const model = editorInstance.current?.getModel();
             if (model) model.setValue(code);
         },
