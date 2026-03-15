@@ -12,7 +12,7 @@ import VotingModal from '../components/Game/VotingModal';
 import SpectatePanel from '../components/Game/SpectatePanel';
 import PowerUpPanel from '../components/Game/PowerUpPanel';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Timer, Play, AlertTriangle, X, Trophy, XCircle, CheckCircle, RotateCcw, Home } from 'lucide-react';
+import { Timer, Play, AlertTriangle, X, Trophy, XCircle, CheckCircle, RotateCcw, Home, LogOut } from 'lucide-react';
 import {
   playSabotageSound, playCountdownBeep, playVictorySound,
   playDefeatSound, playFreezeSound, playUndoSound } from
@@ -48,6 +48,8 @@ const GameRoom = () => {
   // Read initial data from Lobby navigation if available, or from sessionStorage
   const initialGameData = location.state?.initialGameData || (
   roomId ? JSON.parse(sessionStorage.getItem(`challenge_${roomId}`) || 'null') : null);
+
+  const isMockMode = roomId ? JSON.parse(sessionStorage.getItem(`mockMode_${roomId}`) || 'false') : false;
 
   const [timeLeft, setTimeLeft] = useState(initialGameData ? Math.floor(initialGameData.timerDuration / 1000) : 300);
   const [challengeData, setChallengeData] = useState(initialGameData ? initialGameData.challenge : null);
@@ -225,7 +227,7 @@ const GameRoom = () => {
 
         ), /*#__PURE__*/
         _jsx("p", { style: { color: 'rgba(255,255,255,0.3)', fontSize: '0.8rem' }, children:
-          loadingChallenge ? 'Gemini AI is generating your challenge...' : 'Waiting for game to start...' }
+          loadingChallenge ? 'Question is loading...' : 'Waiting for game to start...' }
         ), /*#__PURE__*/
         _jsx("style", { children: `
                     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -306,7 +308,9 @@ const GameRoom = () => {
             _jsx("span", { style: { color: '#00f0ff', fontWeight: 700 }, children: "CIVILIAN (Fix the code!)" })] }
 
           ), /*#__PURE__*/
-          _jsxs("div", { style: { display: 'flex', gap: '8px', alignItems: 'center' }, children: [/*#__PURE__*/
+          _jsxs("div", { style: { display: 'flex', gap: '8px', alignItems: 'center' }, children: [
+
+            isMockMode && /*#__PURE__*/
             _jsxs("div", { style: { display: 'flex', gap: '6px', marginRight: '12px', paddingRight: '12px', borderRight: '1px solid rgba(255,255,255,0.1)' }, children: [/*#__PURE__*/
               _jsx("button", { onClick: () => mockAssignRole('CIVILIAN'), style: {
                   padding: '4px 10px', fontSize: '0.7rem', background: 'transparent',
@@ -318,6 +322,19 @@ const GameRoom = () => {
                   border: '1px solid rgba(255,255,255,0.15)', borderRadius: '6px',
                   color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontWeight: 600
                 }, children: "Mock Imp" })] }
+            ), /*#__PURE__*/
+            _jsxs("button", { onClick: () => {
+                if (isImpostor && socket) {
+                  socket.emit('player_exit', { roomId });
+                }
+                navigate('/');
+              }, style: {
+                padding: '8px 14px', background: 'rgba(255,49,49,0.1)',
+                border: '1px solid rgba(255,49,49,0.3)', borderRadius: '8px',
+                color: '#ff3131', fontWeight: 700, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem'
+              }, children: [/*#__PURE__*/
+              _jsx(LogOut, { size: 14 }), " Exit"] }
             ), /*#__PURE__*/
             _jsxs("button", { onClick: handleRunTests, disabled: submitting, style: {
                 padding: '8px 18px', background: submitting ? '#555' : colors.accent,

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
-import { Copy, Check, Users, Send, Settings, Play, Loader2, Sparkles } from 'lucide-react';import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
+import { Copy, Check, Users, Send, Settings, Play, Loader2, Sparkles, ArrowLeft } from 'lucide-react';import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 
 
 
@@ -31,7 +31,7 @@ const Lobby = () => {
   const [cooldownTime, setCooldownTime] = useState(15); // seconds
   const [copied, setCopied] = useState(false);
 
-  // Mock players including host
+  // Players & chat
   const [players, setPlayers] = useState([]);
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
@@ -39,18 +39,28 @@ const Lobby = () => {
   const [isStarting, setIsStarting] = useState(false);
   const [generatingChallenge, setGeneratingChallenge] = useState(false);
 
-  const isHost = players.length > 0 && players[0].username === (user?.username || player?.username);
-  const canStart = players.length >= 2 && players.length <= 4 && isConnected;
+  // Mock mode
+  const [isMockMode, setIsMockMode] = useState(false);
 
-  // Initialize with current player as host + create room on backend
+  const MOCK_PLAYERS = [
+    { id: 'mock_2', username: 'Alex', isHost: false, isReady: true },
+    { id: 'mock_3', username: 'Sam', isHost: false, isReady: false },
+  ];
+
+  const myName = user?.username || player?.username || 'Player';
+  const isHost = players.length > 0 && players[0].username === myName;
+  const displayPlayers = isMockMode
+    ? [{ id: 'host', username: myName, isHost: true, isReady: true }, ...MOCK_PLAYERS]
+    : players;
+  const canStart = isMockMode ? true : (displayPlayers.length >= 2 && displayPlayers.length <= 4 && isConnected);
+
+  // ─── Initialize: create/join room on backend ───────
   useEffect(() => {
-    const name = user?.username || player?.username || 'Player';
-    if (!player) setPlayerInfo(name);
+    if (!player) setPlayerInfo(myName);
 
-    // Create room on backend when socket connects
     if (socket && isConnected && roomId) {
       console.log('[Lobby] Creating room on backend with ID:', roomId);
-      socket.emit('create_room', { username: name, roomId }, (response) => {
+      socket.emit('create_room', { username: myName, roomId }, (response) => {
         if (response.error) {
           console.error('[Lobby] Failed to create room:', response.error);
         } else {
@@ -58,18 +68,51 @@ const Lobby = () => {
         }
       });
     }
-
-    setPlayers([
-    { id: '1', username: name, isHost: true, isReady: true },
-    { id: '2', username: 'Alex', isHost: false, isReady: true },
-    { id: '3', username: 'Sam', isHost: false, isReady: false }]
-    );
-
-    setChatMessages([
-    { id: 1, sender: 'Alex', text: 'Hey! Ready when you are 🎮', timestamp: Date.now() - 30000 },
-    { id: 2, sender: 'Sam', text: 'This is going to be fun', timestamp: Date.now() - 15000 }]
-    );
   }, [socket, isConnected, roomId]);
+
+  // ─── Listen for real-time player list via room_update ──
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleRoomUpdate = (roomState) => {
+      if (!roomState || !roomState.players) return;
+      const mapped = roomState.players.map((p, i) => ({
+        id: p.socketId || `player_${i}`,
+        username: p.username,
+        isHost: i === 0,
+        isReady: p.isReady ?? true,
+      }));
+      setPlayers(mapped);
+    };
+
+    socket.on('room_update', handleRoomUpdate);
+    return () => socket.off('room_update', handleRoomUpdate);
+  }, [socket]);
+
+  // ─── Listen for being kicked from the room ─────────
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleKicked = ({ message }) => {
+      alert(message || 'You have been removed from the lobby.');
+      navigate('/');
+    };
+
+    socket.on('kicked_from_room', handleKicked);
+    return () => socket.off('kicked_from_room', handleKicked);
+  }, [socket, navigate]);
+
+  // ─── Set initial mock chat messages ────────────────
+  useEffect(() => {
+    if (isMockMode) {
+      setChatMessages([
+        { id: 1, sender: 'Alex', text: 'Hey! Ready when you are 🎮', timestamp: Date.now() - 30000 },
+        { id: 2, sender: 'Sam', text: 'This is going to be fun', timestamp: Date.now() - 15000 },
+      ]);
+    } else {
+      setChatMessages([]);
+    }
+  }, [isMockMode]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -104,6 +147,7 @@ const Lobby = () => {
 
       // Store challenge in sessionStorage so GameRoom can access it
       sessionStorage.setItem(`challenge_${roomId}`, JSON.stringify(data));
+      sessionStorage.setItem(`mockMode_${roomId}`, JSON.stringify(isMockMode));
 
       // Navigate to GameRoom
       navigate(`/room/${roomId}`);
@@ -114,7 +158,7 @@ const Lobby = () => {
     return () => {
       socket.off('game_started', handleGameStarted);
     };
-  }, [socket, navigate, roomId]);
+  }, [socket, navigate, roomId, isMockMode]);
 
   const handleStartGame = () => {
     console.log('[Lobby] Start game clicked');
@@ -122,15 +166,16 @@ const Lobby = () => {
     console.log('[Lobby] Room ID:', roomId);
 
     if (socket && isConnected) {
+      sessionStorage.setItem(`mockMode_${roomId}`, JSON.stringify(isMockMode));
       setIsStarting(true);
       setGeneratingChallenge(true);
       console.log('[Lobby] Emitting start_game event');
       socket.emit('start_game', { roomId });
 
-      // Fallback: if Gemini fails or backend is slow, force navigate after 30s
+      // Fallback: if backend is slow, force navigate after 30s
       setTimeout(() => {
         if (generatingChallenge) {
-          console.warn("[Lobby] Gemini timeout, navigating anyway");
+          console.warn("[Lobby] Timeout, navigating anyway");
           setGeneratingChallenge(false);
           setIsStarting(false);
           navigate(`/room/${roomId}`);
@@ -162,9 +207,14 @@ const Lobby = () => {
             border: '1px solid rgba(255,255,255,0.06)', marginBottom: '16px'
           }, children: /*#__PURE__*/
           _jsxs("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }, children: [/*#__PURE__*/
+            _jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '14px' }, children: [/*#__PURE__*/
+            _jsxs("button", { onClick: () => navigate('/'), style: {
+                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '8px', color: 'white', padding: '6px 12px', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 600
+              }, children: [/*#__PURE__*/_jsx(ArrowLeft, { size: 14 }), " Back"] }), /*#__PURE__*/
             _jsxs("div", { children: [/*#__PURE__*/
               _jsx("div", { style: { fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 600, marginBottom: '4px' }, children: "Room Code" }
-
               ), /*#__PURE__*/
               _jsx("div", { style: {
                   fontFamily: 'monospace', fontSize: '2.5rem', fontWeight: 900, color: '#00f0ff',
@@ -172,6 +222,7 @@ const Lobby = () => {
                 }, children:
                 roomId }
               )] }
+            )] }
             ), /*#__PURE__*/
             _jsx("button", { onClick: handleCopyLink, style: {
                 padding: '10px 20px', background: copied ? 'rgba(57,255,20,0.15)' : 'rgba(0,240,255,0.12)',
@@ -190,10 +241,10 @@ const Lobby = () => {
             border: '1px solid rgba(255,255,255,0.06)', marginBottom: '16px'
           }, children: [/*#__PURE__*/
           _jsxs("h3", { style: { display: 'flex', alignItems: 'center', gap: '8px', color: '#00f0ff', fontWeight: 800, fontSize: '0.85rem', textTransform: 'uppercase', marginBottom: '14px' }, children: [/*#__PURE__*/
-            _jsx(Users, { size: 16 }), " Connected Players (", players.length, "/4)"] }
+            _jsx(Users, { size: 16 }), isMockMode ? ' Mock Players (3/4)' : [' Connected Players (', displayPlayers.length, '/4)']] }
           ), /*#__PURE__*/
           _jsx("div", { style: { display: 'flex', flexDirection: 'column', gap: '8px' }, children:
-            players.map((p) => /*#__PURE__*/
+            displayPlayers.map((p) => /*#__PURE__*/
             _jsxs("div", { style: {
                 display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px',
                 borderRadius: '10px', background: p.isHost ? 'rgba(0,240,255,0.06)' : 'rgba(255,255,255,0.02)',
@@ -243,6 +294,44 @@ const Lobby = () => {
             ), /*#__PURE__*/
             _jsx("input", { type: "range", min: 10, max: 60, value: cooldownTime, onChange: (e) => setCooldownTime(Number(e.target.value)),
               style: { width: '100%', accentColor: '#ff9800' } })] }
+          ), /*#__PURE__*/
+
+          _jsxs("div", { style: { marginTop: '16px', padding: '14px', borderRadius: '10px', background: isMockMode ? 'rgba(255,152,0,0.08)' : 'rgba(255,255,255,0.02)', border: `1px solid ${isMockMode ? 'rgba(255,152,0,0.25)' : 'rgba(255,255,255,0.06)'}` }, children: [/*#__PURE__*/
+            _jsxs("div", { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' }, children: [/*#__PURE__*/
+              _jsxs("div", { children: [/*#__PURE__*/
+                _jsx("div", { style: { fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }, children: "Mock Player Mode" }), /*#__PURE__*/
+                _jsx("div", { style: { fontSize: '0.65rem', color: 'rgba(255,255,255,0.25)', marginTop: '2px' }, children: "Test the game with AI bots instead of real players" })] }
+              ), /*#__PURE__*/
+              _jsx("button", { onClick: () => {
+                  if (!isMockMode) {
+                    const realCount = players.filter(p => !p.isHost).length;
+                    if (realCount > 0) {
+                      const ok = window.confirm(`⚠️ Warning: Enabling Mock Mode will kick ${realCount} real player(s) from the lobby. Proceed?`);
+                      if (!ok) return;
+                    }
+                    if (socket) socket.emit('toggle_mock_mode', { roomId, enabled: true });
+                  }
+                  setIsMockMode(!isMockMode);
+                }, style: {
+                  width: '44px', height: '24px', borderRadius: '12px', border: 'none', cursor: 'pointer',
+                  background: isMockMode ? '#ff9800' : 'rgba(255,255,255,0.1)',
+                  position: 'relative', transition: 'background 0.2s ease'
+                }, children: /*#__PURE__*/
+                _jsx("div", { style: {
+                    width: '18px', height: '18px', borderRadius: '50%', background: 'white',
+                    position: 'absolute', top: '3px', left: isMockMode ? '23px' : '3px',
+                    transition: 'left 0.2s ease'
+                  } })
+              })] }
+            ),
+
+            isMockMode && /*#__PURE__*/
+            _jsx("div", { style: {
+                marginTop: '10px', padding: '8px 12px', borderRadius: '6px',
+                background: 'rgba(255,152,0,0.1)', border: '1px solid rgba(255,152,0,0.2)',
+                color: '#ff9800', fontSize: '0.7rem', fontWeight: 600
+              }, children: "⚠️ Mock Mode is ON — Real players will be kicked if they join. START GAME will use offline AI mode." }
+            )] }
           )] }
         ),
 
@@ -260,7 +349,7 @@ const Lobby = () => {
             _jsx(Sparkles, { size: 20, color: "#00f0ff", style: { animation: 'pulse 1.5s ease-in-out infinite' } })] }
           ), /*#__PURE__*/
           _jsxs("div", { style: { textAlign: 'center' }, children: [/*#__PURE__*/
-            _jsx("div", { style: { color: '#00f0ff', fontWeight: 800, fontSize: '0.95rem', marginBottom: '4px' }, children: "\uD83E\uDD16 GEMINI AI IS GENERATING YOUR CHALLENGE" }
+            _jsx("div", { style: { color: '#00f0ff', fontWeight: 800, fontSize: '0.95rem', marginBottom: '4px' }, children: "\uD83D\uDD04 QUESTION IS LOADING..." }
 
             ), /*#__PURE__*/
             _jsx("div", { style: { color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem' }, children: "Creating a unique DSA problem with intentional bugs..." }

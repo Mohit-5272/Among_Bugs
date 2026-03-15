@@ -73,8 +73,8 @@ function registerSocketHandlers(io) {
             console.log(`[start_game] Starting game for room ${roomId} with ${room.players.size} player(s)`);
 
             try {
-                // Generate a dynamic challenge via Gemini (or fallback if unavailable/rate-limited)
-                const { generateDynamicChallenge } = require('../services/geminiService');
+                // Generate a dynamic challenge via Groq (primary) or Gemini (fallback)
+                const { generateDynamicChallenge } = require('../services/llmService');
                 console.log('[start_game] Calling generateDynamicChallenge...');
                 const challenge = await generateDynamicChallenge();
                 
@@ -130,6 +130,65 @@ function registerSocketHandlers(io) {
             } catch (error) {
                 console.error('[start_game] Error:', error);
             }
+        });
+
+        // ─── MOCK MODE TOGGLE ───────────────────────────────
+        socket.on('toggle_mock_mode', ({ roomId, enabled }) => {
+            const room = gameState.rooms.get(roomId);
+            if (!room) return;
+            if (room.hostId !== socket.id) return; // only host can toggle
+
+            if (enabled) {
+                // Kick all non-host players
+                for (const [socketId, player] of room.players) {
+                    if (socketId !== socket.id) {
+                        io.to(socketId).emit('kicked_from_room', {
+                            message: 'Host enabled Mock Player Mode. You have been removed from the lobby.'
+                        });
+                        const sock = io.sockets.sockets.get(socketId);
+                        if (sock) sock.leave(roomId);
+                    }
+                }
+                // Remove them from game state
+                const toRemove = [];
+                for (const [socketId] of room.players) {
+                    if (socketId !== socket.id) toRemove.push(socketId);
+                }
+                toRemove.forEach(sid => room.players.delete(sid));
+
+                console.log(`[MockMode] Host enabled mock mode in room ${roomId}, kicked ${toRemove.length} players`);
+            }
+
+            // Send updated room state to remaining players (just the host)
+            io.to(roomId).emit('room_update', gameState.getRoomPublicState(roomId));
+        });
+
+        // ─── PLAYER EXIT (via Exit button) ──────────────────
+        socket.on('player_exit', ({ roomId }) => {
+            const room = gameState.rooms.get(roomId);
+            if (!room) return;
+
+            const player = room.players.get(socket.id);
+            if (!player) return;
+
+            console.log(`[Exit] ${player.username} exited room ${roomId} (role: ${player.role})`);
+
+            // If the impostor exits, civilians win
+            if (room.state.impostorId === socket.id && room.status === 'PLAYING') {
+                clearInterval(room.state.timerInterval);
+                room.status = 'FINISHED';
+                io.to(roomId).emit('game_over', {
+                    winner: 'CIVILIANS',
+                    reason: 'Impostor left the game',
+                    impostorId: socket.id,
+                });
+            }
+
+            // Remove the player from the room
+            gameState.leaveRoom(roomId, socket.id);
+            socket.leave(roomId);
+            io.to(roomId).emit('player_left', { socketId: socket.id, username: player.username });
+            io.to(roomId).emit('room_update', gameState.getRoomPublicState(roomId));
         });
 
         // ─── GAMEPLAY EVENTS ────────────────────────────────
