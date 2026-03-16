@@ -418,6 +418,76 @@ h6 {
       rgba(0, 0, 0, 0.55) 100%);
 }
 
+/* ── Home Page Animated Overlays ──────────────────── */
+
+/* Lamp glow blink animation — dramatic dim to bright */
+@keyframes lampBlink {
+  0%, 100% { opacity: 1; }
+  5% { opacity: 0.05; }
+  10% { opacity: 1; }
+  15% { opacity: 0.1; }
+  20% { opacity: 0.95; }
+  50% { opacity: 1; }
+  70% { opacity: 0.08; }
+  75% { opacity: 1; }
+  85% { opacity: 0.15; }
+}
+
+@keyframes lampBlink2 {
+  0%, 100% { opacity: 1; }
+  8% { opacity: 0.05; }
+  12% { opacity: 0.95; }
+  30% { opacity: 0.08; }
+  35% { opacity: 1; }
+  60% { opacity: 0.9; }
+  80% { opacity: 0.1; }
+  88% { opacity: 1; }
+}
+
+/* Scrolling code animation */
+@keyframes scrollCode {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-50%); }
+}
+
+/*
+  bg-home.png is a SQUARE image (1:1).
+  With background-size:cover on ~16:9 viewport:
+  - Width fills viewport 1:1
+  - ~22% cropped from top and bottom
+  - viewport_y = (image_y - 22) / 56 * 100
+*/
+
+/* Left lamp — the big desk lamp on the left, bulb glowing warmly */
+.lamp-glow-left {
+  position: absolute;
+  width: 8vw;
+  height: 12vh;
+  top: 2%;
+  left: 13%;
+  background: radial-gradient(ellipse at center, rgba(255, 220, 120, 0.55) 0%, rgba(255, 200, 80, 0.15) 45%, transparent 75%);
+  border-radius: 50%;
+  z-index: 0;
+  pointer-events: none;
+  animation: lampBlink 4s ease-in-out infinite;
+  filter: blur(12px);
+}
+
+/* Right lamp — smaller desk lamp near the purple crewmate */
+.lamp-glow-right {
+  position: absolute;
+  width: 6vw;
+  height: 10vh;
+  top: 34%;
+  left: 86%;
+  background: radial-gradient(ellipse at center, rgba(255, 210, 100, 0.5) 0%, rgba(255, 190, 70, 0.15) 45%, transparent 75%);
+  border-radius: 50%;
+  z-index: 0;
+  pointer-events: none;
+  animation: lampBlink2 5s ease-in-out infinite;
+  filter: blur(10px);
+}
+
 .home-content {
   position: relative;
   z-index: 2;
