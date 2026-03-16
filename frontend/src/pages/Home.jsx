@@ -228,7 +228,10 @@ const Home = () => {
 
   return (/*#__PURE__*/
     _jsxs("div", { className: "home-container", children: [/*#__PURE__*/
-      _jsx("div", { className: "home-bg" }), /*#__PURE__*/
+      _jsxs("div", { className: "home-bg", children: [
+        _jsx("div", { className: "lamp-glow-left" }),
+        _jsx("div", { className: "lamp-glow-right" }),
+      ] }), /*#__PURE__*/
       _jsx("div", { className: "home-overlay" }), /*#__PURE__*/
 
       _jsxs("div", { className: "home-content", children: [/*#__PURE__*/
